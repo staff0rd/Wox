@@ -17,11 +17,11 @@ namespace Wox.Plugin.WebSearch
         private bool _isUpdate;
         private WebSearch _updateWebSearch;
         private readonly PluginInitContext _context;
-        private readonly WebSearchPlugin _plguin;
+        private readonly WebSearchPlugin _plugin;
 
         public WebSearchSetting(WebSearchesSetting settingWidow)
         {
-            _plguin = settingWidow.Plugin;
+            _plugin = settingWidow.Plugin;
             _context = settingWidow.Context;
             _settingWindow = settingWidow;
             InitializeComponent();
@@ -86,7 +86,7 @@ namespace Wox.Plugin.WebSearch
             {
                 try
                 {
-                    _plguin.NotifyActionKeywordsUpdated(_updateWebSearch.ActionKeyword, newActionKeyword);
+                    _plugin.NotifyActionKeywordsUpdated(_updateWebSearch.ActionKeyword, newActionKeyword);
                 }
                 catch (WoxPluginException exception)
                 {
@@ -104,7 +104,7 @@ namespace Wox.Plugin.WebSearch
             {
                 try
                 {
-                    _plguin.NotifyActionKeywordsAdded(newActionKeyword);
+                    _plugin.NotifyActionKeywordsAdded(newActionKeyword);
                 }
                 catch (WoxPluginException exception)
                 {
