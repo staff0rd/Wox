@@ -322,5 +322,10 @@ namespace Wox
         {
             e.Handled = true;
         }
+
+        private void menuSettings_Click(object sender, RoutedEventArgs e)
+        {
+            App.API.OpenSettingDialog();
+        }
     }
 }
