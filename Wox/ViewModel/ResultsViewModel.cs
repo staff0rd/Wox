@@ -20,12 +20,20 @@ namespace Wox.ViewModel
         private Thickness _margin;
 
         private readonly object _resultsUpdateLock = new object();
+        private UserSettingStorage _settings;
+        private TopMostRecordStorage _topMostRecord;
+
+        public ResultsViewModel(UserSettingStorage settings, TopMostRecordStorage topMostRecord)
+        {
+            _settings = settings;
+            _topMostRecord = topMostRecord;
+        }
 
         #endregion
 
         #region ViewModel Properties
 
-        public int MaxHeight => UserSettingStorage.Instance.MaxResultsToShow * 50;
+        public int MaxHeight => _settings.MaxResultsToShow * 50;
 
         public ResultViewModel SelectedResult
         {
@@ -75,7 +83,7 @@ namespace Wox.ViewModel
 
         private bool IsTopMostResult(Result result)
         {
-            return TopMostRecordStorage.Instance.IsTopMost(result);
+            return _topMostRecord.IsTopMost(result);
         }
 
         private int InsertIndexOf(int newScore, IList<ResultViewModel> list)
@@ -102,6 +110,12 @@ namespace Wox.ViewModel
             {
                 SelectedResult = Results[index];
             }
+        }
+
+        public void SelectResult(ResultViewModel result)
+        {
+            int i = Results.IndexOf(result);
+            SelectResult(i);
         }
 
         public void SelectNextResult()
@@ -185,8 +199,7 @@ namespace Wox.ViewModel
         {
             lock (_resultsUpdateLock)
             {
-                var newResults = new List<ResultViewModel>();
-                newRawResults.ForEach((re) => { newResults.Add(new ResultViewModel(re)); });
+                var newResults = newRawResults.Select(r => new ResultViewModel(r)).ToList();
                 // todo use async to do new result calculation
                 var resultsCopy = Results.ToList();
                 var oldResults = resultsCopy.Where(r => r.RawResult.PluginID == resultId).ToList();

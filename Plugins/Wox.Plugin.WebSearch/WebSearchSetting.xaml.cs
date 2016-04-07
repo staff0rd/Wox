@@ -6,6 +6,7 @@ using System.Windows.Media.Imaging;
 using Microsoft.Win32;
 using Wox.Infrastructure;
 using Wox.Infrastructure.Exception;
+using System.Windows.Input;
 
 namespace Wox.Plugin.WebSearch
 {
@@ -18,19 +19,22 @@ namespace Wox.Plugin.WebSearch
         private WebSearch _updateWebSearch;
         private readonly PluginInitContext _context;
         private readonly WebSearchPlugin _plugin;
+        private WebSearchStorage _settings;
 
-        public WebSearchSetting(WebSearchesSetting settingWidow)
+        public WebSearchSetting(WebSearchesSetting settingWidow, WebSearchStorage settings)
         {
             _plugin = settingWidow.Plugin;
             _context = settingWidow.Context;
             _settingWindow = settingWidow;
             InitializeComponent();
-            Loaded += (sender, e) => MoveFocus(new System.Windows.Input.TraversalRequest(System.Windows.Input.FocusNavigationDirection.Next));
+            _settings = settings;
+            // Focus first textbox
+            Loaded += (sender, e) => MoveFocus(new TraversalRequest(FocusNavigationDirection.Next));
         }
 
         public void UpdateItem(WebSearch webSearch)
         {
-            _updateWebSearch = WebSearchStorage.Instance.WebSearches.FirstOrDefault(o => o == webSearch);
+            _updateWebSearch = _settings.WebSearches.FirstOrDefault(o => o == webSearch);
             if (_updateWebSearch == null || string.IsNullOrEmpty(_updateWebSearch.Url))
             {
 
@@ -111,7 +115,7 @@ namespace Wox.Plugin.WebSearch
                     MessageBox.Show(exception.Message);
                     return;
                 }
-                WebSearchStorage.Instance.WebSearches.Add(new WebSearch
+                _settings.WebSearches.Add(new WebSearch
                 {
                     ActionKeyword = newActionKeyword,
                     Enabled = cbEnable.IsChecked ?? false,
@@ -121,7 +125,7 @@ namespace Wox.Plugin.WebSearch
                 });
             }
 
-            WebSearchStorage.Instance.Save();
+            _settings.Save();
             _settingWindow.ReloadWebSearchView();
             Close();
         }

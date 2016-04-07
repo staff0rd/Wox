@@ -19,38 +19,25 @@ namespace Wox
 {
     public class PublicAPIInstance : IPublicAPI
     {
-
+        private UserSettingStorage _settings;
         #region Constructor
 
-        public PublicAPIInstance(MainViewModel mainVM)
+        public PublicAPIInstance(MainViewModel mainVM, UserSettingStorage settings)
         {
             MainVM = mainVM;
-
-
+            _settings = settings;
             GlobalHotkey.Instance.hookedKeyboardCallback += KListener_hookedKeyboardCallback;
             WebRequest.RegisterPrefix("data", new DataWebRequestFactory());
-
-            SetHotkey(UserSettingStorage.Instance.Hotkey, OnHotkey);
+            SetHotkey(_settings.Hotkey, OnHotkey);
             SetCustomPluginHotkey();
 
-            MainVM.ListeningKeyPressed += (o, e) => {
-
-                if(e.KeyEventArgs.Key == Key.Back)
-                {
-                    BackKeyDownEvent?.Invoke(new WoxKeyDownEventArgs
-                    {
-                        Query = MainVM.QueryText,
-                        keyEventArgs = e.KeyEventArgs
-                    });
-                }
-            };
         }
 
         #endregion
 
         #region Properties
 
-        private MainViewModel MainVM
+        public MainViewModel MainVM
         {
             get;
             set;
@@ -98,7 +85,7 @@ namespace Wox
             ShowWox();
         }
 
-        public void ShowMsg(string title, string subTitle, string iconPath)
+        public void ShowMsg(string title, string subTitle = "", string iconPath = "")
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
@@ -111,7 +98,7 @@ namespace Wox
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
-                SettingWindow sw = SingletonWindowOpener.Open<SettingWindow>(this);
+                SettingWindow sw = SingletonWindowOpener.Open<SettingWindow>(this, _settings);
                 sw.SwitchTo(tabName);
             });
         }
@@ -133,7 +120,11 @@ namespace Wox
 
         public void ReloadPlugins()
         {
-            Application.Current.Dispatcher.Invoke(() => PluginManager.Init(this));
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                PluginManager.Initialize();
+                PluginManager.InitializePlugins(this);
+            });
         }
 
         public string GetTranslation(string key)
@@ -146,10 +137,9 @@ namespace Wox
             return PluginManager.AllPlugins.ToList();
         }
 
-        public event WoxKeyDownEventHandler BackKeyDownEvent;
         public event WoxGlobalKeyboardEventHandler GlobalKeyboardEvent;
-        public event ResultItemDropEventHandler ResultItemDropEvent;
 
+        [Obsolete("This will be removed in Wox 1.3")]
         public void PushResults(Query query, PluginMetadata plugin, List<Result> results)
         {
             results.ForEach(o =>
@@ -159,20 +149,6 @@ namespace Wox
                 o.OriginQuery = query;
             });
             MainVM.UpdateResultView(results, plugin, query);
-        }
-
-        public void ShowContextMenu(PluginMetadata plugin, List<Result> results)
-        {
-            if (results != null && results.Count > 0)
-            {
-                results.ForEach(o =>
-                {
-                    o.PluginDirectory = plugin.PluginDirectory;
-                    o.PluginID = plugin.ID;
-                });
-
-                MainVM.ShowContextMenu(results, plugin.ID);
-            }
         }
 
         #endregion
@@ -190,19 +166,16 @@ namespace Wox
 
         private void HideWox()
         {
-            UserSettingStorage.Instance.WindowLeft = MainVM.Left;
-            UserSettingStorage.Instance.WindowTop = MainVM.Top;
             MainVM.MainWindowVisibility = Visibility.Collapsed;
         }
 
         private void ShowWox(bool selectAll = true)
         {
-            UserSettingStorage.Instance.IncreaseActivateTimes();
             MainVM.MainWindowVisibility = Visibility.Visible;
             MainVM.OnTextBoxSelected();
         }
 
-        public void SetHotkey(string hotkeyStr, EventHandler<HotkeyEventArgs> action)
+        internal void SetHotkey(string hotkeyStr, EventHandler<HotkeyEventArgs> action)
         {
             var hotkey = new HotkeyModel(hotkeyStr);
             SetHotkey(hotkey, action);
@@ -237,17 +210,17 @@ namespace Wox
         private bool ShouldIgnoreHotkeys()
         {
             //double if to omit calling win32 function
-            if (UserSettingStorage.Instance.IgnoreHotkeysOnFullscreen)
+            if (_settings.IgnoreHotkeysOnFullscreen)
                 if (WindowIntelopHelper.IsWindowFullscreen())
                     return true;
 
             return false;
         }
 
-        private void SetCustomPluginHotkey()
+        internal void SetCustomPluginHotkey()
         {
-            if (UserSettingStorage.Instance.CustomPluginHotkeys == null) return;
-            foreach (CustomPluginHotkey hotkey in UserSettingStorage.Instance.CustomPluginHotkeys)
+            if (_settings.CustomPluginHotkeys == null) return;
+            foreach (CustomPluginHotkey hotkey in _settings.CustomPluginHotkeys)
             {
                 CustomPluginHotkey hotkey1 = hotkey;
                 SetHotkey(hotkey.Hotkey, delegate
@@ -259,7 +232,7 @@ namespace Wox
             }
         }
 
-        private void OnHotkey(object sender, HotkeyEventArgs e)
+        protected internal void OnHotkey(object sender, HotkeyEventArgs e)
         {
             if (ShouldIgnoreHotkeys()) return;
             ToggleWox();
